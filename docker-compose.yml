@@ -1,0 +1,27 @@
+version: '3.8'
+
+services:
+  # ==================== MONITOR SERVICE ====================
+  monitor-service:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: monitor-service
+    restart: unless-stopped
+    environment:
+      # Manager Site API
+      MANAGER_API_URL: ${MANAGER_API_URL:-http://host.docker.internal:3005}
+      MONITOR_API_KEY: ${MONITOR_API_KEY}
+      # Dead Checker Settings
+      DEAD_CHECKER_INTERVAL_MS: ${DEAD_CHECKER_INTERVAL_MS:-60000}
+      DEAD_CHECKER_STALE_MINUTES: ${DEAD_CHECKER_STALE_MINUTES:-5}
+      # Logging
+      LOG_LEVEL: ${LOG_LEVEL:-info}
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+    networks:
+      - monitor-network
+
+networks:
+  monitor-network:
+    driver: bridge
