@@ -2,8 +2,16 @@ import { config } from './config';
 import { logger } from './logger';
 import { managerApi } from './api-client';
 import { startDeadCheckerJob, stopDeadCheckerJob } from './jobs/dead-checker';
+import { startAllocationProcessorJob, stopAllocationProcessorJob } from './jobs/allocation-processor';
+import { startExpiredClaimsReleaseJob, stopExpiredClaimsReleaseJob } from './jobs/expired-claims-release';
+import { startRequestTimeoutJob, stopRequestTimeoutJob } from './jobs/request-timeout';
+import { startStackingTriggerJob, stopStackingTriggerJob } from './jobs/stacking-trigger';
 
 let deadCheckerIntervalId: NodeJS.Timeout | null = null;
+let allocationProcessorIntervalId: NodeJS.Timeout | null = null;
+let expiredClaimsReleaseIntervalId: NodeJS.Timeout | null = null;
+let requestTimeoutIntervalId: NodeJS.Timeout | null = null;
+let stackingTriggerIntervalId: NodeJS.Timeout | null = null;
 
 /**
  * Validate configuration before starting
@@ -46,6 +54,10 @@ async function start(): Promise<void> {
   logger.info('Configuration:', {
     managerApiUrl: config.managerApiUrl,
     deadCheckerInterval: `${config.deadChecker.intervalMs / 1000}s`,
+    allocationProcessorInterval: `${config.allocationProcessor.intervalMs / 1000}s`,
+    expiredClaimsReleaseInterval: `${config.expiredClaimsRelease.intervalMs / 1000}s`,
+    requestTimeoutInterval: `${config.requestTimeout.intervalMs / 1000}s`,
+    stackingTriggerInterval: `${config.stackingTrigger.intervalMs / 1000}s`,
   });
 
   // Check connection
@@ -57,6 +69,10 @@ async function start(): Promise<void> {
 
   // Start jobs
   deadCheckerIntervalId = startDeadCheckerJob();
+  allocationProcessorIntervalId = startAllocationProcessorJob();
+  expiredClaimsReleaseIntervalId = startExpiredClaimsReleaseJob();
+  requestTimeoutIntervalId = startRequestTimeoutJob();
+  stackingTriggerIntervalId = startStackingTriggerJob();
 
   logger.info('Monitor Service is running');
   logger.info('Press Ctrl+C to stop');
@@ -70,6 +86,22 @@ function shutdown(): void {
 
   if (deadCheckerIntervalId) {
     stopDeadCheckerJob(deadCheckerIntervalId);
+  }
+
+  if (allocationProcessorIntervalId) {
+    stopAllocationProcessorJob(allocationProcessorIntervalId);
+  }
+
+  if (expiredClaimsReleaseIntervalId) {
+    stopExpiredClaimsReleaseJob(expiredClaimsReleaseIntervalId);
+  }
+
+  if (requestTimeoutIntervalId) {
+    stopRequestTimeoutJob(requestTimeoutIntervalId);
+  }
+
+  if (stackingTriggerIntervalId) {
+    stopStackingTriggerJob(stackingTriggerIntervalId);
   }
 
   logger.info('Monitor Service stopped');

@@ -21,6 +21,48 @@ interface HealthCheckResponse {
   timestamp: string;
 }
 
+interface ProcessAllocationResponse {
+  success: boolean;
+  message: string;
+  data: {
+    processed: number;
+    skipped: number;
+    failed: number;
+  };
+}
+
+interface ReleaseExpiredResponse {
+  success: boolean;
+  message: string;
+  data: {
+    releasedCount: number;
+  };
+}
+
+interface TimeoutRequestsResponse {
+  success: boolean;
+  message: string;
+  data: {
+    timedOut: number;
+    cancelledItems: number;
+  };
+}
+
+interface TriggerStackingResponse {
+  success: boolean;
+  message: string;
+  data: {
+    triggered: number;
+    updatedItems: number;
+    details: Array<{
+      requestId: string;
+      entityConnect: string;
+      threshold: number;
+      linkProfileCount: number;
+    }>;
+  };
+}
+
 /**
  * API Client for Manager Site API
  */
@@ -78,6 +120,56 @@ export class ManagerApiClient {
    */
   async markStaleToolsAsDead(): Promise<MarkStaleDeadResponse> {
     return this.request<MarkStaleDeadResponse>('POST', '/api/public/monitor/mark-stale-dead');
+  }
+
+  /**
+   * Process NEW requests - allocate websites to service requests
+   * This triggers the allocation service to:
+   * 1. Find NEW service requests
+   * 2. Allocate available websites to each request
+   * 3. Create allocation items for tools to claim
+   */
+  async processAllocation(serviceType?: string): Promise<ProcessAllocationResponse> {
+    const endpoint = serviceType
+      ? `/api/public/allocation-tasks/process?serviceType=${serviceType}`
+      : '/api/public/allocation-tasks/process';
+    return this.request<ProcessAllocationResponse>('POST', endpoint);
+  }
+
+  /**
+   * Release expired claims
+   * Claims that exceed their timeout will be released back to PENDING
+   * so other tools can claim them
+   */
+  async releaseExpiredClaims(): Promise<ReleaseExpiredResponse> {
+    return this.request<ReleaseExpiredResponse>('POST', '/api/public/allocation-tasks/release-expired');
+  }
+
+  /**
+   * Timeout expired requests
+   * Requests that exceeded their completion time will be marked as COMPLETED
+   * and their pending items will be cancelled
+   *
+   * Timeout calculation:
+   * - entityLimit >= 100: timeout = (entityLimit / 100) * REQUEST_COMPLETION_TIME_PER_100
+   * - entityLimit < 100: timeout = 30 minutes (fixed)
+   */
+  async timeoutExpiredRequests(): Promise<TimeoutRequestsResponse> {
+    return this.request<TimeoutRequestsResponse>('POST', '/api/public/allocation-tasks/timeout-requests');
+  }
+
+  /**
+   * Trigger stacking for requests that have reached their threshold
+   *
+   * Checks requests with entityConnect = 'all' or 'limit':
+   * - 'all': linkProfile count >= entityLimit → trigger stacking
+   * - 'limit': linkProfile count >= limit value → trigger stacking
+   *
+   * When threshold is met, sets stackingReady=true for CONNECTING tasks
+   * so tools can claim them for stacking phase.
+   */
+  async triggerStackingForReadyRequests(): Promise<TriggerStackingResponse> {
+    return this.request<TriggerStackingResponse>('POST', '/api/public/allocation-tasks/trigger-stacking');
   }
 }
 
