@@ -38,6 +38,20 @@ export const config = {
     intervalMs: parseInt(process.env.STACKING_TRIGGER_INTERVAL_MS || '30000', 10),
   },
 
+  // Tool Auto-Assign Job
+  toolAutoAssign: {
+    // Interval between checks (milliseconds) - default 30 seconds
+    // Runs before allocation processor to ensure idTool is set before websites are allocated
+    intervalMs: parseInt(process.env.TOOL_AUTO_ASSIGN_INTERVAL_MS || '30000', 10),
+  },
+
+  // Re-Allocation Job
+  reAllocation: {
+    // Interval between checks (milliseconds) - default 60 seconds
+    // Checks active requests that need more website allocations
+    intervalMs: parseInt(process.env.RE_ALLOCATION_INTERVAL_MS || '60000', 10),
+  },
+
   // Logging
   logLevel: process.env.LOG_LEVEL || 'info',
 };

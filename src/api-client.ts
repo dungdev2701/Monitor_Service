@@ -48,6 +48,35 @@ interface TimeoutRequestsResponse {
   };
 }
 
+interface AutoAssignToolsResponse {
+  success: boolean;
+  message: string;
+  data: {
+    assigned: number;
+    skipped: number;
+    details: Array<{
+      requestId: string;
+      idTool: string;
+      priority: string;
+      auctionPrice: string | null;
+    }>;
+  };
+}
+
+interface ReAllocateResponse {
+  success: boolean;
+  message: string;
+  data: {
+    processed: number;
+    skipped: number;
+    details: Array<{
+      requestId: string;
+      deficit: number;
+      allocated: number;
+    }>;
+  };
+}
+
 interface TriggerStackingResponse {
   success: boolean;
   message: string;
@@ -170,6 +199,26 @@ export class ManagerApiClient {
    */
   async triggerStackingForReadyRequests(): Promise<TriggerStackingResponse> {
     return this.request<TriggerStackingResponse>('POST', '/api/public/allocation-tasks/trigger-stacking');
+  }
+
+  /**
+   * Re-allocate websites for active requests that need more items
+   * When all items are processed but results are not enough
+   */
+  async reAllocate(): Promise<ReAllocateResponse> {
+    return this.request<ReAllocateResponse>('POST', '/api/public/allocation-tasks/re-allocate');
+  }
+
+  /**
+   * Auto-assign idTool to NEW/PENDING requests
+   *
+   * Assigns tool pairs to requests based on:
+   * - customerType matching (priority tools → HIGH/URGENT requests)
+   * - auctionPrice ordering (higher price first within same group)
+   * - Round-robin distribution across available tool pairs
+   */
+  async autoAssignTools(): Promise<AutoAssignToolsResponse> {
+    return this.request<AutoAssignToolsResponse>('POST', '/api/public/allocation-tasks/auto-assign-tools');
   }
 }
 

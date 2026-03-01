@@ -6,12 +6,16 @@ import { startAllocationProcessorJob, stopAllocationProcessorJob } from './jobs/
 import { startExpiredClaimsReleaseJob, stopExpiredClaimsReleaseJob } from './jobs/expired-claims-release';
 import { startRequestTimeoutJob, stopRequestTimeoutJob } from './jobs/request-timeout';
 import { startStackingTriggerJob, stopStackingTriggerJob } from './jobs/stacking-trigger';
+import { startToolAutoAssignJob, stopToolAutoAssignJob } from './jobs/tool-auto-assign';
+import { startReAllocationJob, stopReAllocationJob } from './jobs/re-allocation';
 
 let deadCheckerIntervalId: NodeJS.Timeout | null = null;
+let toolAutoAssignIntervalId: NodeJS.Timeout | null = null;
 let allocationProcessorIntervalId: NodeJS.Timeout | null = null;
 let expiredClaimsReleaseIntervalId: NodeJS.Timeout | null = null;
 let requestTimeoutIntervalId: NodeJS.Timeout | null = null;
 let stackingTriggerIntervalId: NodeJS.Timeout | null = null;
+let reAllocationIntervalId: NodeJS.Timeout | null = null;
 
 /**
  * Validate configuration before starting
@@ -58,6 +62,8 @@ async function start(): Promise<void> {
     expiredClaimsReleaseInterval: `${config.expiredClaimsRelease.intervalMs / 1000}s`,
     requestTimeoutInterval: `${config.requestTimeout.intervalMs / 1000}s`,
     stackingTriggerInterval: `${config.stackingTrigger.intervalMs / 1000}s`,
+    toolAutoAssignInterval: `${config.toolAutoAssign.intervalMs / 1000}s`,
+    reAllocationInterval: `${config.reAllocation.intervalMs / 1000}s`,
   });
 
   // Check connection
@@ -69,10 +75,12 @@ async function start(): Promise<void> {
 
   // Start jobs
   deadCheckerIntervalId = startDeadCheckerJob();
+  toolAutoAssignIntervalId = startToolAutoAssignJob(); // Run BEFORE allocation processor
   allocationProcessorIntervalId = startAllocationProcessorJob();
   expiredClaimsReleaseIntervalId = startExpiredClaimsReleaseJob();
   requestTimeoutIntervalId = startRequestTimeoutJob();
   stackingTriggerIntervalId = startStackingTriggerJob();
+  reAllocationIntervalId = startReAllocationJob();
 
   logger.info('Monitor Service is running');
   logger.info('Press Ctrl+C to stop');
@@ -86,6 +94,10 @@ function shutdown(): void {
 
   if (deadCheckerIntervalId) {
     stopDeadCheckerJob(deadCheckerIntervalId);
+  }
+
+  if (toolAutoAssignIntervalId) {
+    stopToolAutoAssignJob(toolAutoAssignIntervalId);
   }
 
   if (allocationProcessorIntervalId) {
@@ -102,6 +114,10 @@ function shutdown(): void {
 
   if (stackingTriggerIntervalId) {
     stopStackingTriggerJob(stackingTriggerIntervalId);
+  }
+
+  if (reAllocationIntervalId) {
+    stopReAllocationJob(reAllocationIntervalId);
   }
 
   logger.info('Monitor Service stopped');
